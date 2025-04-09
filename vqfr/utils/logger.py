@@ -77,38 +77,42 @@ class MessageLogger():
                 time (float): Iter time.
                 data_time (float): Data time for each iter.
         """
-        # epoch, iter, learning rates
-        epoch = log_vars.pop('epoch')
-        current_iter = log_vars.pop('iter')
-        lrs = log_vars.pop('lrs')
+        # 记录当前的 epoch 和迭代次数，以及学习率列表
+        epoch = log_vars.pop('epoch')  # 从日志变量中取出 epoch
+        current_iter = log_vars.pop('iter')  # 从日志变量中取出当前迭代次数
+        lrs = log_vars.pop('lrs')  # 从日志变量中取出学习率列表
 
+        # 构建日志信息的初始部分，包括实验名称、epoch、迭代次数和学习率
         message = (f'[{self.exp_name[:5]}..][epoch:{epoch:3d}, iter:{current_iter:8,d}, lr:(')
-        for v in lrs:
-            message += f'{v:.3e},'
+        for v in lrs:  # 遍历学习率列表
+            message += f'{v:.3e},'  # 将学习率格式化为科学计数法并添加到日志信息中
         message += ')] '
 
-        # time and estimated time
+        # 如果日志变量中包含时间信息，则计算时间相关的日志信息
         if 'time' in log_vars.keys():
-            iter_time = log_vars.pop('time')
-            data_time = log_vars.pop('data_time')
+            iter_time = log_vars.pop('time')  # 取出每次迭代的时间
+            data_time = log_vars.pop('data_time')  # 取出每次迭代的数据加载时间
 
-            total_time = time.time() - self.start_time
-            time_sec_avg = total_time / (current_iter - self.start_iter + 1)
-            eta_sec = time_sec_avg * (self.max_iters - current_iter - 1)
-            eta_str = str(datetime.timedelta(seconds=int(eta_sec)))
-            message += f'[eta: {eta_str}, '
-            message += f'time (data): {iter_time:.3f} ({data_time:.3f})] '
+            # 计算总耗时、平均每次迭代耗时以及预计剩余时间
+            total_time = time.time() - self.start_time  # 从开始时间到现在的总耗时
+            time_sec_avg = total_time / (current_iter - self.start_iter + 1)  # 平均每次迭代耗时
+            eta_sec = time_sec_avg * (self.max_iters - current_iter - 1)  # 预计剩余时间
+            eta_str = str(datetime.timedelta(seconds=int(eta_sec)))  # 将预计剩余时间格式化为可读字符串
+            message += f'[eta: {eta_str}, '  # 添加预计剩余时间到日志信息
+            message += f'time (data): {iter_time:.3f} ({data_time:.3f})] '  # 添加迭代时间和数据加载时间到日志信息
 
-        # other items, especially losses
+        # 遍历日志变量中的其他键值对，通常是损失值等
         for k, v in log_vars.items():
-            message += f'{k}: {v:.4e} '
-            # tensorboard logger
+            message += f'{k}: {v:.4e} '  # 将键值对格式化为科学计数法并添加到日志信息中
+            # 如果启用了 TensorBoard 日志记录器，并且实验名称中不包含 "debug"
             if self.use_tb_logger and 'debug' not in self.exp_name:
-                if k.startswith('l_'):
-                    self.tb_logger.add_scalar(f'losses/{k}', v, current_iter)
-                else:
-                    self.tb_logger.add_scalar(k, v, current_iter)
-        self.logger.info(message)
+                if k.startswith('l_'):  # 如果键以 'l_' 开头，表示是损失值
+                    self.tb_logger.add_scalar(f'losses/{k}', v, current_iter)  # 将损失值记录到 TensorBoard
+                else:  # 其他键值对
+                    self.tb_logger.add_scalar(k, v, current_iter)  # 将键值对记录到 TensorBoard
+        self.logger.info(message)  # 将最终的日志信息输出到日志记录器
+
+        
 
 
 @master_only

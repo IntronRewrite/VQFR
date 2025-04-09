@@ -8,6 +8,7 @@ from torchvision import transforms
 from vqfr.data.transforms import augment
 from vqfr.utils import FileClient, get_root_logger, imfrombytes, img2tensor
 from vqfr.utils.registry import DATASET_REGISTRY
+from vqfr.data.data_util import paired_paths_from_folder,paths_from_folder
 
 
 @DATASET_REGISTRY.register()
@@ -34,7 +35,7 @@ class FFHQDataset(data.Dataset):
         self.gt_folder = opt['dataroot_gt']
         self.mean = opt['mean']
         self.std = opt['std']
-        self.resize = transforms.Resize((320, 480))
+        transforms.Resize((320, 480), antialias=True)
 
         if self.io_backend_opt['type'] == 'lmdb':
             self.io_backend_opt['db_paths'] = self.gt_folder
@@ -44,7 +45,8 @@ class FFHQDataset(data.Dataset):
                 self.paths = [line.split('.')[0] for line in fin]
         else:
             # FFHQ has 70000 images in total
-            self.paths = [osp.join(self.gt_folder, f'norain-{v+1:d}.png') for v in range(10230)]
+            self.paths = paths_from_folder(self.gt_folder)
+            # self.paths = [osp.join(self.gt_folder, f'norain-{v+1:d}.png') for v in range(10230)]
 
     def __getitem__(self, index):
         if self.file_client is None:
@@ -76,7 +78,7 @@ class FFHQDataset(data.Dataset):
         img_gt = img2tensor(img_gt, bgr2rgb=True, float32=True)
 
         img_gt = self.resize(img_gt)
-        
+
         # normalize
         normalize(img_gt, self.mean, self.std, inplace=True)
         return {'gt': img_gt, 'gt_path': gt_path}
